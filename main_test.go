@@ -23,11 +23,9 @@ func TestShortenURL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, "/shorten", &body)
+	req := httptest.NewRequest(http.MethodPost, "/shorten", &body)
+
 	req.Header.Set("Content-Type", "application/json")
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	recorder := httptest.NewRecorder()
 
@@ -65,5 +63,60 @@ func TestShortenURL(t *testing.T) {
 	location := redirectRecorder.Header().Get("Location")
 	if location != requestBody.Url {
 		t.Fatalf("Expected redirect location %s, got %s", requestBody.Url, location)
+	}
+}
+
+func TestShortenURLValidation(t *testing.T) {
+	tests := []struct {
+		name           string
+		body           string
+		expectedStatus int
+	}{
+		{
+			name:           "Shorten URL - Invalid JSON",
+			body:           `{"url":`,
+			expectedStatus: 400,
+		},
+		{
+			name:           "Shorten URL - Empty URL",
+			body:           `{"url":""}`,
+			expectedStatus: 400,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			router := SetupRouter()
+
+			requestBody := bytes.NewBufferString(test.body)
+
+			req := httptest.NewRequest(http.MethodPost, "/shorten", requestBody)
+
+			req.Header.Set("Content-Type", "application/json")
+
+			recorder := httptest.NewRecorder()
+
+			router.ServeHTTP(recorder, req)
+
+			if recorder.Code != test.expectedStatus {
+				t.Fatalf("expected status %d, got %d", test.expectedStatus, recorder.Code)
+			}
+		})
+	}
+}
+
+func TestGetShortenURLNotFound(t *testing.T) {
+	router := SetupRouter()
+
+	uniqueId := GenerateId()
+
+	req := httptest.NewRequest(http.MethodGet, "/"+uniqueId, nil)
+
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusNotFound {
+		t.Fatalf("expected status %d, got %d", http.StatusNotFound, recorder.Code)
 	}
 }
