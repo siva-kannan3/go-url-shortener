@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -99,14 +101,23 @@ func SetupRouter() *http.ServeMux {
 	})
 
 	router.HandleFunc("GET /context/cancel", func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 
-		select {
-		case <-time.After(10 * time.Second):
-			fmt.Println("work completed")
+		defer cancel()
 
-		case <-ctx.Done():
-			fmt.Println("request cancelled:", ctx.Err())
+		err := doSlowOperation123(ctx)
+
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) {
+				http.Error(w, "operation timed out", http.StatusGatewayTimeout)
+				return
+			}
+
+			if errors.Is(err, context.Canceled) {
+				return
+			}
+
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 
@@ -114,4 +125,14 @@ func SetupRouter() *http.ServeMux {
 	})
 
 	return router
+}
+
+func doSlowOperation123(ctx context.Context) error {
+	select {
+	case <-time.After(10 * time.Second):
+		fmt.Println("work completed")
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
