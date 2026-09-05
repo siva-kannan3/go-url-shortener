@@ -2,14 +2,12 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
-	"time"
 )
 
 func TestShortenURL(t *testing.T) {
@@ -225,25 +223,44 @@ func TestConcurrentShortenURL(t *testing.T) {
 	}
 }
 
-func doSlowOperation(ctx context.Context) error {
-	select {
-	case <-time.After(5 * time.Second):
-		return nil
+func TestURLServiceCreateShortURLValidation(t *testing.T) {
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
 
-	case <-ctx.Done():
-		return ctx.Err()
+	urlService := NewURLService(&urlStore)
+
+	_, err := urlService.CreateShortUrl("", []string{})
+
+	if err == nil {
+		t.Fatal("expected error for empty URL")
 	}
 }
 
-func TestContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
+func TestURLServiceCreateShortURL(t *testing.T) {
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
 
-	err := doSlowOperation(ctx)
-	if err != context.DeadlineExceeded {
-		t.Errorf(
-			"expected context.DeadlineExceeded, got %v",
-			err,
+	urlService := NewURLService(&urlStore)
+
+	result, err := urlService.CreateShortUrl(
+		"https://www.google.com",
+		[]string{"google", "website"},
+	)
+
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+
+	if result.ID == "" {
+		t.Fatal("expected ID to be generated")
+	}
+
+	if result.Url != "https://www.google.com" {
+		t.Fatalf(
+			"expected URL https://www.google.com, got %s",
+			result.Url,
 		)
 	}
 }
