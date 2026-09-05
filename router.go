@@ -5,21 +5,32 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 )
 
+type URLStore struct {
+	urls  map[string]ShortenedUrl
+	mutex sync.RWMutex
+}
+
 func SetupRouter() *http.ServeMux {
-	// In memory store
-	urls := make(map[string]ShortenedUrl)
 
 	router := http.NewServeMux()
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("Hello World!"))
 	})
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
+		// urlStore.mutex.RLock()
+
+		// defer urlStore.mutex.RUnlock()
+
 		id := r.PathValue("id")
-		match, exists := urls[id]
+		match, exists := urlStore.urls[id]
 		if !exists {
 			http.NotFound(w, r)
 			return
@@ -29,6 +40,10 @@ func SetupRouter() *http.ServeMux {
 	})
 
 	router.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
+		urlStore.mutex.Lock()
+
+		defer urlStore.mutex.Unlock()
+
 		requestData := ShortenRequestBody{}
 		err := json.NewDecoder(r.Body).Decode(&requestData)
 		if err != nil {
@@ -45,7 +60,7 @@ func SetupRouter() *http.ServeMux {
 		var uniqueId string
 		for {
 			uniqueGenId := GenerateId()
-			_, exists := urls[uniqueGenId]
+			_, exists := urlStore.urls[uniqueGenId]
 			if !exists {
 				uniqueId = uniqueGenId
 				break
@@ -58,7 +73,7 @@ func SetupRouter() *http.ServeMux {
 			Tags: requestData.Tags,
 		}
 
-		urls[uniqueId] = shortenedURL
+		urlStore.urls[uniqueId] = shortenedURL
 
 		// 1. Detect the protocol
 		scheme := "http"

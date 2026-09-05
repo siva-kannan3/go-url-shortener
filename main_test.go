@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 )
 
@@ -101,6 +102,7 @@ func TestShortenURLValidation(t *testing.T) {
 			if recorder.Code != test.expectedStatus {
 				t.Fatalf("expected status %d, got %d", test.expectedStatus, recorder.Code)
 			}
+
 		})
 	}
 }
@@ -118,5 +120,83 @@ func TestGetShortenURLNotFound(t *testing.T) {
 
 	if recorder.Code != http.StatusNotFound {
 		t.Fatalf("expected status %d, got %d", http.StatusNotFound, recorder.Code)
+	}
+}
+
+func TestConcurrentShortenURL(t *testing.T) {
+	router := SetupRouter()
+	var wg sync.WaitGroup
+	var ids []string
+	var idsMutex sync.Mutex
+
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			requestBody := ShortenRequestBody{
+				Url:  "https://www.google.com",
+				Tags: []string{"google", "website"},
+			}
+
+			var body bytes.Buffer
+			err := json.NewEncoder(&body).Encode(requestBody)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/shorten", &body)
+
+			req.Header.Set("Content-Type", "application/json")
+
+			recorder := httptest.NewRecorder()
+
+			router.ServeHTTP(recorder, req)
+
+			if recorder.Code != http.StatusCreated {
+				t.Errorf("expected status %d, got %d", http.StatusCreated, recorder.Code)
+				return
+			}
+
+			var response ShortenResponseBody
+
+			err = json.NewDecoder(recorder.Body).Decode(&response)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if response.ID == "" {
+				t.Errorf("expected ID in response")
+				return
+			}
+
+			if response.Url == "" {
+				t.Errorf("expected Url in response")
+				return
+			}
+
+			idsMutex.Lock()
+			ids = append(ids, response.ID)
+			idsMutex.Unlock()
+		}()
+	}
+
+	wg.Wait()
+
+	if len(ids) != 100 {
+		t.Errorf("expected 100 IDs, got %d", len(ids))
+	}
+
+	uniqueIDs := make(map[string]bool)
+
+	for _, id := range ids {
+		if uniqueIDs[id] {
+			t.Fatalf("Duplicate ID already found %s", id)
+		}
+
+		uniqueIDs[id] = true
 	}
 }
