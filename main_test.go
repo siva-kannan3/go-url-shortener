@@ -126,8 +126,7 @@ func TestGetShortenURLNotFound(t *testing.T) {
 func TestConcurrentShortenURL(t *testing.T) {
 	router := SetupRouter()
 	var wg sync.WaitGroup
-	var ids []string
-	var idsMutex sync.Mutex
+	ids := make(chan string, 100)
 
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
@@ -178,9 +177,7 @@ func TestConcurrentShortenURL(t *testing.T) {
 				return
 			}
 
-			idsMutex.Lock()
-			ids = append(ids, response.ID)
-			idsMutex.Unlock()
+			ids <- response.ID
 		}()
 	}
 
@@ -192,7 +189,8 @@ func TestConcurrentShortenURL(t *testing.T) {
 
 	uniqueIDs := make(map[string]bool)
 
-	for _, id := range ids {
+	for i := 0; i < 100; i++ {
+		id := <-ids
 		if uniqueIDs[id] {
 			t.Fatalf("Duplicate ID already found %s", id)
 		}
