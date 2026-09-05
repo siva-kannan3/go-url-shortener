@@ -216,7 +216,10 @@ func TestContextCancellation(t *testing.T) {
 	defer cancel()
 
 	err := doSlowOperation(ctx)
-	if err != nil {
-		fmt.Println(err)
+	if err != context.DeadlineExceeded {
+		t.Errorf(
+			"expected context.DeadlineExceeded, got %v",
+			err,
+		)
 	}
 }
