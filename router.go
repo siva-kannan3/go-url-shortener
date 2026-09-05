@@ -1,15 +1,16 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
-	"time"
 )
+
+type URLRepository interface {
+	Get(id string) (ShortenedUrl, bool)
+	Create(url string, tags []string) ShortenedUrl
+}
 
 type URLStore struct {
 	urls  map[string]ShortenedUrl
@@ -26,7 +27,12 @@ func (store *URLStore) Get(id string) (ShortenedUrl, bool) {
 	return shortenedUrl, exist
 }
 
-func (store *URLStore) Create(ctx context.Context, requestData ShortenRequestBody) ShortenedUrl {
+func (store *URLStore) Create(url string, tags []string) ShortenedUrl {
+
+	store.mutex.Lock()
+
+	defer store.mutex.Unlock()
+
 	var uniqueId string
 	for {
 		uniqueGenId := GenerateId()
@@ -39,8 +45,8 @@ func (store *URLStore) Create(ctx context.Context, requestData ShortenRequestBod
 
 	shortenedURL := ShortenedUrl{
 		ID:   uniqueId,
-		Url:  requestData.Url,
-		Tags: requestData.Tags,
+		Url:  url,
+		Tags: tags,
 	}
 
 	store.urls[uniqueId] = shortenedURL
@@ -48,12 +54,9 @@ func (store *URLStore) Create(ctx context.Context, requestData ShortenRequestBod
 	return shortenedURL
 }
 
-func SetupRouter() *http.ServeMux {
+func SetupRouter(urlService *URLService) *http.ServeMux {
 
 	router := http.NewServeMux()
-	urlStore := URLStore{
-		urls: make(map[string]ShortenedUrl),
-	}
 
 	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -61,7 +64,7 @@ func SetupRouter() *http.ServeMux {
 	})
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		match, exists := urlStore.Get(id)
+		match, exists := urlService.GetUrl(id)
 		if !exists {
 			http.NotFound(w, r)
 			return
@@ -79,13 +82,12 @@ func SetupRouter() *http.ServeMux {
 			return
 		}
 
-		if strings.TrimSpace(requestData.Url) == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("URL is empty"))
+		shortenedUrl, err := urlService.CreateShortUrl(requestData.Url, requestData.Tags)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		shortenedUrl := urlStore.Create(r.Context(), requestData)
 
 		// 1. Detect the protocol
 		scheme := "http"
@@ -108,40 +110,5 @@ func SetupRouter() *http.ServeMux {
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(responsePayload)
 	})
-
-	router.HandleFunc("GET /context/cancel", func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-
-		defer cancel()
-
-		err := doSlowOperation123(ctx)
-
-		if err != nil {
-			if errors.Is(err, context.DeadlineExceeded) {
-				http.Error(w, "operation timed out", http.StatusGatewayTimeout)
-				return
-			}
-
-			if errors.Is(err, context.Canceled) {
-				return
-			}
-
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		w.WriteHeader(http.StatusOK)
-	})
-
 	return router
-}
-
-func doSlowOperation123(ctx context.Context) error {
-	select {
-	case <-time.After(10 * time.Second):
-		fmt.Println("work completed")
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
 }

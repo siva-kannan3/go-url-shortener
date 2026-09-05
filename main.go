@@ -23,7 +23,13 @@ type ShortenedUrl struct {
 }
 
 func main() {
-	router := SetupRouter()
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
+
+	urlService := NewURLService(&urlStore)
+
+	router := SetupRouter(urlService)
 
 	server := http.Server{
 		Addr:    ":8000",

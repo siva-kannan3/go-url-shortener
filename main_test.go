@@ -13,7 +13,13 @@ import (
 )
 
 func TestShortenURL(t *testing.T) {
-	router := SetupRouter()
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
+
+	urlService := NewURLService(&urlStore)
+
+	router := SetupRouter(urlService)
 
 	requestBody := ShortenRequestBody{
 		Url:  "https://www.google.com",
@@ -89,7 +95,13 @@ func TestShortenURLValidation(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			router := SetupRouter()
+			urlStore := URLStore{
+				urls: make(map[string]ShortenedUrl),
+			}
+
+			urlService := NewURLService(&urlStore)
+
+			router := SetupRouter(urlService)
 
 			requestBody := bytes.NewBufferString(test.body)
 
@@ -110,7 +122,13 @@ func TestShortenURLValidation(t *testing.T) {
 }
 
 func TestGetShortenURLNotFound(t *testing.T) {
-	router := SetupRouter()
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
+
+	urlService := NewURLService(&urlStore)
+
+	router := SetupRouter(urlService)
 
 	uniqueId := GenerateId()
 
@@ -126,7 +144,13 @@ func TestGetShortenURLNotFound(t *testing.T) {
 }
 
 func TestConcurrentShortenURL(t *testing.T) {
-	router := SetupRouter()
+	urlStore := URLStore{
+		urls: make(map[string]ShortenedUrl),
+	}
+
+	urlService := NewURLService(&urlStore)
+
+	router := SetupRouter(urlService)
 	var wg sync.WaitGroup
 	ids := make(chan string, 100)
 
