@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type URLStore struct {
@@ -95,6 +96,21 @@ func SetupRouter() *http.ServeMux {
 
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(responsePayload)
+	})
+
+	router.HandleFunc("GET /context/cancel", func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		select {
+		case <-time.After(10 * time.Second):
+			fmt.Println("work completed")
+
+		case <-ctx.Done():
+			fmt.Println("request cancelled:", ctx.Err())
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
 	})
 
 	return router
