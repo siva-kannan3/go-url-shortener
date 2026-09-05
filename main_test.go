@@ -201,26 +201,22 @@ func TestConcurrentShortenURL(t *testing.T) {
 	}
 }
 
+func doSlowOperation(ctx context.Context) error {
+	select {
+	case <-time.After(5 * time.Second):
+		return nil
+
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 func TestContextCancellation(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				fmt.Println("goroutine cancelled")
-				return
-			default:
-				fmt.Println("working...")
-				time.Sleep(500 * time.Millisecond)
-			}
-		}
-	}()
-
-	time.Sleep(2 * time.Second)
-
-	cancel()
-
-	time.Sleep(1 * time.Second)
+	err := doSlowOperation(ctx)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
