@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestShortenURL(t *testing.T) {
@@ -197,4 +199,28 @@ func TestConcurrentShortenURL(t *testing.T) {
 
 		uniqueIDs[id] = true
 	}
+}
+
+func TestContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				fmt.Println("goroutine cancelled")
+				return
+			default:
+				fmt.Println("working...")
+				time.Sleep(500 * time.Millisecond)
+			}
+		}
+	}()
+
+	time.Sleep(2 * time.Second)
+
+	cancel()
+
+	time.Sleep(1 * time.Second)
 }
