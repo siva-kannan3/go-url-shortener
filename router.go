@@ -16,6 +16,38 @@ type URLStore struct {
 	mutex sync.RWMutex
 }
 
+func (store *URLStore) Get(id string) (ShortenedUrl, bool) {
+	store.mutex.RLock()
+
+	defer store.mutex.RUnlock()
+
+	shortenedUrl, exist := store.urls[id]
+
+	return shortenedUrl, exist
+}
+
+func (store *URLStore) Create(ctx context.Context, requestData ShortenRequestBody) ShortenedUrl {
+	var uniqueId string
+	for {
+		uniqueGenId := GenerateId()
+		_, exists := store.urls[uniqueGenId]
+		if !exists {
+			uniqueId = uniqueGenId
+			break
+		}
+	}
+
+	shortenedURL := ShortenedUrl{
+		ID:   uniqueId,
+		Url:  requestData.Url,
+		Tags: requestData.Tags,
+	}
+
+	store.urls[uniqueId] = shortenedURL
+
+	return shortenedURL
+}
+
 func SetupRouter() *http.ServeMux {
 
 	router := http.NewServeMux()
@@ -28,12 +60,8 @@ func SetupRouter() *http.ServeMux {
 		w.Write([]byte("Hello World!"))
 	})
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
-		// urlStore.mutex.RLock()
-
-		// defer urlStore.mutex.RUnlock()
-
 		id := r.PathValue("id")
-		match, exists := urlStore.urls[id]
+		match, exists := urlStore.Get(id)
 		if !exists {
 			http.NotFound(w, r)
 			return
@@ -43,9 +71,6 @@ func SetupRouter() *http.ServeMux {
 	})
 
 	router.HandleFunc("POST /shorten", func(w http.ResponseWriter, r *http.Request) {
-		urlStore.mutex.Lock()
-
-		defer urlStore.mutex.Unlock()
 
 		requestData := ShortenRequestBody{}
 		err := json.NewDecoder(r.Body).Decode(&requestData)
@@ -60,23 +85,7 @@ func SetupRouter() *http.ServeMux {
 			return
 		}
 
-		var uniqueId string
-		for {
-			uniqueGenId := GenerateId()
-			_, exists := urlStore.urls[uniqueGenId]
-			if !exists {
-				uniqueId = uniqueGenId
-				break
-			}
-		}
-
-		shortenedURL := ShortenedUrl{
-			ID:   uniqueId,
-			Url:  requestData.Url,
-			Tags: requestData.Tags,
-		}
-
-		urlStore.urls[uniqueId] = shortenedURL
+		shortenedUrl := urlStore.Create(r.Context(), requestData)
 
 		// 1. Detect the protocol
 		scheme := "http"
@@ -89,10 +98,10 @@ func SetupRouter() *http.ServeMux {
 		serverURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
 		// 3. Construct the full URL
-		fullURL := fmt.Sprintf("%s/%s", serverURL, uniqueId)
+		fullURL := fmt.Sprintf("%s/%s", serverURL, shortenedUrl.ID)
 
 		responsePayload := ShortenResponseBody{
-			ID:  uniqueId,
+			ID:  shortenedUrl.ID,
 			Url: fullURL,
 		}
 
