@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 )
 
 type URLRepository interface {
-	Get(id string) (ShortenedUrl, bool)
+	Get(id string) (ShortenedUrl, error)
 	Create(shortenedUrl ShortenedUrl) (ShortenedUrl, error)
 }
 
@@ -17,14 +18,18 @@ type URLStore struct {
 	mutex sync.RWMutex
 }
 
-func (store *URLStore) Get(id string) (ShortenedUrl, bool) {
+func (store *URLStore) Get(id string) (ShortenedUrl, error) {
 	store.mutex.RLock()
 
 	defer store.mutex.RUnlock()
 
 	shortenedUrl, exist := store.urls[id]
 
-	return shortenedUrl, exist
+	if !exist {
+		return shortenedUrl, ErrURLNotFound
+	}
+
+	return shortenedUrl, nil
 }
 
 func (store *URLStore) Create(shortenedURL ShortenedUrl) (ShortenedUrl, error) {
@@ -54,9 +59,13 @@ func SetupRouter(urlService *URLService) *http.ServeMux {
 	})
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		match, exists := urlService.GetUrl(id)
-		if !exists {
+		match, err := urlService.GetUrl(id)
+		if errors.Is(err, ErrURLNotFound) {
 			http.NotFound(w, r)
+			return
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 		redirectUrl := match.Url

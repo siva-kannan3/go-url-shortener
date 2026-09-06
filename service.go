@@ -6,6 +6,7 @@ import (
 )
 
 var ErrIDAlreadyExists = errors.New("id already exists")
+var ErrURLNotFound = errors.New("url not found")
 
 type URLService struct {
 	repository URLRepository
@@ -44,6 +45,6 @@ func (service *URLService) CreateShortUrl(url string, tags []string) (ShortenedU
 
 }
 
-func (service *URLService) GetUrl(id string) (ShortenedUrl, bool) {
+func (service *URLService) GetUrl(id string) (ShortenedUrl, error) {
 	return service.repository.Get(id)
 }
