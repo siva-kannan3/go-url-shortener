@@ -21,8 +21,7 @@ func TestShortenURL(t *testing.T) {
 	router := SetupRouter(urlService)
 
 	requestBody := ShortenRequestBody{
-		Url:  "https://www.google.com",
-		Tags: []string{"google", "website"},
+		Url: "https://www.google.com",
 	}
 
 	var body bytes.Buffer
@@ -154,8 +153,7 @@ func TestConcurrentShortenURL(t *testing.T) {
 			defer wg.Done()
 
 			requestBody := ShortenRequestBody{
-				Url:  "https://www.google.com",
-				Tags: []string{"google", "website"},
+				Url: "https://www.google.com",
 			}
 
 			var body bytes.Buffer

@@ -15,7 +15,7 @@ func TestURLServiceCreateShortURLValidation(t *testing.T) {
 
 	urlService := NewURLService(&mockRepository)
 
-	_, err := urlService.CreateShortUrl("", []string{})
+	_, err := urlService.CreateShortUrl("")
 
 	if err == nil {
 		t.Fatal("expected error for empty URL")
@@ -35,7 +35,6 @@ func TestURLServiceCreateShortURL(t *testing.T) {
 
 	result, err := urlService.CreateShortUrl(
 		"https://www.google.com",
-		[]string{"google", "website"},
 	)
 
 	if err != nil {
@@ -62,9 +61,8 @@ func TestURLServiceGetURL(t *testing.T) {
 	mockRepository := MockURLRepository{
 		urls: map[string]domain.ShortenedURL{
 			"test123": {
-				ID:   "test123",
-				Url:  "https://www.google.com",
-				Tags: []string{"google"},
+				ID:  "test123",
+				Url: "https://www.google.com",
 			},
 		},
 	}
@@ -110,7 +108,6 @@ func TestURLServiceCreateShortURLRepositoryError(t *testing.T) {
 
 	_, err := urlService.CreateShortUrl(
 		"https://www.google.com",
-		[]string{"google"},
 	)
 
 	if !errors.Is(err, expectedErr) {

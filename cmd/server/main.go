@@ -10,16 +10,6 @@ import (
 	"github.com/siva-kannan3/go-url-shortener/internal/service"
 )
 
-type ShortenRequestBody struct {
-	Url  string   `json:"url"`
-	Tags []string `json:"tags"`
-}
-
-type ShortenResponseBody struct {
-	ID  string `json:"id"`
-	Url string `json:"url"`
-}
-
 func main() {
 	urlStore := repository.NewURLStore()
 

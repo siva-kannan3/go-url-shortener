@@ -18,16 +18,15 @@ func NewURLService(repository repository.URLRepository) *URLService {
 	}
 }
 
-func (service *URLService) CreateShortUrl(url string, tags []string) (domain.ShortenedURL, error) {
+func (service *URLService) CreateShortUrl(url string) (domain.ShortenedURL, error) {
 	if strings.TrimSpace(url) == "" {
 		return domain.ShortenedURL{}, errors.New("URL is empty")
 	}
 
 	for {
 		ShortenedURL := domain.ShortenedURL{
-			ID:   generateID(),
-			Url:  url,
-			Tags: tags,
+			ID:  generateID(),
+			Url: url,
 		}
 
 		result, err := service.repository.Create(ShortenedURL)

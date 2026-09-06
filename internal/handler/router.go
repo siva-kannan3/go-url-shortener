@@ -11,8 +11,7 @@ import (
 )
 
 type ShortenRequestBody struct {
-	Url  string   `json:"url"`
-	Tags []string `json:"tags"`
+	Url string `json:"url"`
 }
 
 type ShortenResponseBody struct {
@@ -52,7 +51,7 @@ func SetupRouter(urlService *service.URLService) *http.ServeMux {
 			return
 		}
 
-		ShortenedURL, err := urlService.CreateShortUrl(requestData.Url, requestData.Tags)
+		ShortenedURL, err := urlService.CreateShortUrl(requestData.Url)
 
 		if err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
