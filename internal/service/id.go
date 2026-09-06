@@ -15,7 +15,7 @@ func generateRandomCharacter() byte {
 func generateID() string {
 	var id string
 
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 8; i++ {
 		id += string(generateRandomCharacter())
 	}
 
