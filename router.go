@@ -9,7 +9,7 @@ import (
 
 type URLRepository interface {
 	Get(id string) (ShortenedUrl, bool)
-	Create(url string, tags []string) ShortenedUrl
+	Create(shortenedUrl ShortenedUrl) (ShortenedUrl, error)
 }
 
 type URLStore struct {
@@ -27,31 +27,21 @@ func (store *URLStore) Get(id string) (ShortenedUrl, bool) {
 	return shortenedUrl, exist
 }
 
-func (store *URLStore) Create(url string, tags []string) ShortenedUrl {
+func (store *URLStore) Create(shortenedURL ShortenedUrl) (ShortenedUrl, error) {
 
 	store.mutex.Lock()
 
 	defer store.mutex.Unlock()
 
-	var uniqueId string
-	for {
-		uniqueGenId := GenerateId()
-		_, exists := store.urls[uniqueGenId]
-		if !exists {
-			uniqueId = uniqueGenId
-			break
-		}
+	_, exists := store.urls[shortenedURL.ID]
+
+	if exists {
+		return ShortenedUrl{}, ErrIDAlreadyExists
 	}
 
-	shortenedURL := ShortenedUrl{
-		ID:   uniqueId,
-		Url:  url,
-		Tags: tags,
-	}
+	store.urls[shortenedURL.ID] = shortenedURL
 
-	store.urls[uniqueId] = shortenedURL
-
-	return shortenedURL
+	return shortenedURL, nil
 }
 
 func SetupRouter(urlService *URLService) *http.ServeMux {
@@ -85,7 +75,7 @@ func SetupRouter(urlService *URLService) *http.ServeMux {
 		shortenedUrl, err := urlService.CreateShortUrl(requestData.Url, requestData.Tags)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 
