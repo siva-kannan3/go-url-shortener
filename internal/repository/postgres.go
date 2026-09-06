@@ -8,6 +8,16 @@ import (
 	"github.com/siva-kannan3/go-url-shortener/internal/domain"
 )
 
+var (
+	ErrIDAlreadyExists = errors.New("id already exists")
+	ErrURLNotFound     = errors.New("url not found")
+)
+
+type URLRepository interface {
+	Get(id string) (domain.ShortenedURL, error)
+	Create(ShortenedURL domain.ShortenedURL) (domain.ShortenedURL, error)
+}
+
 // Compile-time check to ensure PostgresRepository implements URLRepository.
 // If later someone changes the interface: the project will fail to compile until PostgresRepository implement the change
 var _ URLRepository = (*PostgresRepository)(nil)
