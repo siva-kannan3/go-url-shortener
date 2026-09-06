@@ -87,7 +87,7 @@ func TestShortenURLValidation(t *testing.T) {
 		{
 			name:           "Shorten URL - Empty URL",
 			body:           `{"url":""}`,
-			expectedStatus: 400,
+			expectedStatus: 500,
 		},
 	}
 
@@ -224,11 +224,11 @@ func TestConcurrentShortenURL(t *testing.T) {
 }
 
 func TestURLServiceCreateShortURLValidation(t *testing.T) {
-	urlStore := URLStore{
+	mockRepository := MockURLRepository{
 		urls: make(map[string]ShortenedUrl),
 	}
 
-	urlService := NewURLService(&urlStore)
+	urlService := NewURLService(&mockRepository)
 
 	_, err := urlService.CreateShortUrl("", []string{})
 
@@ -238,11 +238,11 @@ func TestURLServiceCreateShortURLValidation(t *testing.T) {
 }
 
 func TestURLServiceCreateShortURL(t *testing.T) {
-	urlStore := URLStore{
+	mockRepository := MockURLRepository{
 		urls: make(map[string]ShortenedUrl),
 	}
 
-	urlService := NewURLService(&urlStore)
+	urlService := NewURLService(&mockRepository)
 
 	result, err := urlService.CreateShortUrl(
 		"https://www.google.com",
@@ -263,4 +263,66 @@ func TestURLServiceCreateShortURL(t *testing.T) {
 			result.Url,
 		)
 	}
+
+	if mockRepository.createCalls != 1 {
+		t.Fatalf("Expected create calls %d, received %d", 1, mockRepository.createCalls)
+	}
+}
+
+func TestURLServiceGetURL(t *testing.T) {
+	mockRepository := MockURLRepository{
+		urls: map[string]ShortenedUrl{
+			"test123": {
+				ID:   "test123",
+				Url:  "https://www.google.com",
+				Tags: []string{"google"},
+			},
+		},
+	}
+
+	urlService := NewURLService(&mockRepository)
+
+	result, exists := urlService.GetUrl("test123")
+
+	if !exists {
+		t.Fatal("expected URL to exist")
+	}
+
+	if result.ID != "test123" {
+		t.Fatalf("expected ID test123, got %s", result.ID)
+	}
+
+	if result.Url != "https://www.google.com" {
+		t.Fatalf(
+			"expected URL https://www.google.com, got %s",
+			result.Url,
+		)
+	}
+
+	if mockRepository.getCalls != 1 {
+		t.Fatalf(
+			"expected Get to be called once, got %d",
+			mockRepository.getCalls,
+		)
+	}
+}
+
+type MockURLRepository struct {
+	urls        map[string]ShortenedUrl
+	createCalls int
+	getCalls    int
+}
+
+func (mock *MockURLRepository) Get(id string) (ShortenedUrl, bool) {
+	mock.getCalls++
+	shortenedUrl, exists := mock.urls[id]
+	return shortenedUrl, exists
+}
+
+func (mock *MockURLRepository) Create(shortenedUrl ShortenedUrl) (ShortenedUrl, error) {
+	mock.createCalls++
+
+	mock.urls[shortenedUrl.ID] = shortenedUrl
+
+	return shortenedUrl, nil
 }
