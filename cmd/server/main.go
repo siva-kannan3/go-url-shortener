@@ -1,9 +1,13 @@
-package main
+package server
 
 import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/siva-kannan3/go-url-shortener/internal/handler"
+	"github.com/siva-kannan3/go-url-shortener/internal/repository"
+	"github.com/siva-kannan3/go-url-shortener/internal/service"
 )
 
 type ShortenRequestBody struct {
@@ -16,20 +20,12 @@ type ShortenResponseBody struct {
 	Url string `json:"url"`
 }
 
-type ShortenedUrl struct {
-	ID   string
-	Url  string
-	Tags []string
-}
-
 func main() {
-	urlStore := URLStore{
-		urls: make(map[string]ShortenedUrl),
-	}
+	urlStore := repository.NewURLStore()
 
-	urlService := NewURLService(&urlStore)
+	urlService := service.NewURLService(urlStore)
 
-	router := SetupRouter(urlService)
+	router := handler.SetupRouter(urlService)
 
 	server := http.Server{
 		Addr:    ":8000",

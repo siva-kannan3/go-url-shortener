@@ -1,10 +1,10 @@
-package main
+package service
 
 import (
 	"math/rand"
 )
 
-func GenerateRandomCharacter() byte {
+func generateRandomCharacter() byte {
 	const characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 	index := rand.Intn(len(characters))
@@ -12,11 +12,11 @@ func GenerateRandomCharacter() byte {
 	return characters[index]
 }
 
-func GenerateId() string {
+func generateID() string {
 	var id string
 
 	for i := 0; i < 6; i++ {
-		id += string(GenerateRandomCharacter())
+		id += string(generateRandomCharacter())
 	}
 
 	return id

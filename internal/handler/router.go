@@ -1,55 +1,26 @@
-package main
+package handler
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"sync"
+
+	"github.com/siva-kannan3/go-url-shortener/internal/repository"
+	"github.com/siva-kannan3/go-url-shortener/internal/service"
 )
 
-type URLRepository interface {
-	Get(id string) (ShortenedUrl, error)
-	Create(shortenedUrl ShortenedUrl) (ShortenedUrl, error)
+type ShortenRequestBody struct {
+	Url  string   `json:"url"`
+	Tags []string `json:"tags"`
 }
 
-type URLStore struct {
-	urls  map[string]ShortenedUrl
-	mutex sync.RWMutex
+type ShortenResponseBody struct {
+	ID  string `json:"id"`
+	Url string `json:"url"`
 }
 
-func (store *URLStore) Get(id string) (ShortenedUrl, error) {
-	store.mutex.RLock()
-
-	defer store.mutex.RUnlock()
-
-	shortenedUrl, exist := store.urls[id]
-
-	if !exist {
-		return shortenedUrl, ErrURLNotFound
-	}
-
-	return shortenedUrl, nil
-}
-
-func (store *URLStore) Create(shortenedURL ShortenedUrl) (ShortenedUrl, error) {
-
-	store.mutex.Lock()
-
-	defer store.mutex.Unlock()
-
-	_, exists := store.urls[shortenedURL.ID]
-
-	if exists {
-		return ShortenedUrl{}, ErrIDAlreadyExists
-	}
-
-	store.urls[shortenedURL.ID] = shortenedURL
-
-	return shortenedURL, nil
-}
-
-func SetupRouter(urlService *URLService) *http.ServeMux {
+func SetupRouter(urlService *service.URLService) *http.ServeMux {
 
 	router := http.NewServeMux()
 
@@ -59,8 +30,8 @@ func SetupRouter(urlService *URLService) *http.ServeMux {
 	})
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		match, err := urlService.GetUrl(id)
-		if errors.Is(err, ErrURLNotFound) {
+		match, err := urlService.GetURL(id)
+		if errors.Is(err, repository.ErrURLNotFound) {
 			http.NotFound(w, r)
 			return
 		}
@@ -81,7 +52,7 @@ func SetupRouter(urlService *URLService) *http.ServeMux {
 			return
 		}
 
-		shortenedUrl, err := urlService.CreateShortUrl(requestData.Url, requestData.Tags)
+		ShortenedURL, err := urlService.CreateShortUrl(requestData.Url, requestData.Tags)
 
 		if err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -99,10 +70,10 @@ func SetupRouter(urlService *URLService) *http.ServeMux {
 		serverURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
 		// 3. Construct the full URL
-		fullURL := fmt.Sprintf("%s/%s", serverURL, shortenedUrl.ID)
+		fullURL := fmt.Sprintf("%s/%s", serverURL, ShortenedURL.ID)
 
 		responsePayload := ShortenResponseBody{
-			ID:  shortenedUrl.ID,
+			ID:  ShortenedURL.ID,
 			Url: fullURL,
 		}
 
