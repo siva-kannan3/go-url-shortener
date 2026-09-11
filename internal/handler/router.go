@@ -23,10 +23,12 @@ func SetupRouter(urlService *service.URLService) *http.ServeMux {
 
 	router := http.NewServeMux()
 
-	router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+	// Health check route
+	router.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello World!"))
+		w.Write([]byte("OK"))
 	})
+
 	router.HandleFunc("GET /{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		match, err := urlService.GetURL(id)
