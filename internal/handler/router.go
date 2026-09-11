@@ -53,6 +53,10 @@ func SetupRouter(urlService *service.URLService) *http.ServeMux {
 
 		ShortenedURL, err := urlService.CreateShortUrl(requestData.Url)
 
+		if errors.Is(err, service.ErrInvalidURL) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		if err != nil {
 			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return

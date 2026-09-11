@@ -2,11 +2,14 @@ package service
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 
 	"github.com/siva-kannan3/go-url-shortener/internal/domain"
 	"github.com/siva-kannan3/go-url-shortener/internal/repository"
 )
+
+var ErrInvalidURL = errors.New("invalid URL")
 
 type URLService struct {
 	repository repository.URLRepository
@@ -19,8 +22,8 @@ func NewURLService(repository repository.URLRepository) *URLService {
 }
 
 func (service *URLService) CreateShortUrl(url string) (domain.ShortenedURL, error) {
-	if strings.TrimSpace(url) == "" {
-		return domain.ShortenedURL{}, errors.New("URL is empty")
+	if !isValidURL(url) {
+		return domain.ShortenedURL{}, ErrInvalidURL
 	}
 
 	for {
@@ -46,4 +49,19 @@ func (service *URLService) CreateShortUrl(url string) (domain.ShortenedURL, erro
 
 func (service *URLService) GetURL(id string) (domain.ShortenedURL, error) {
 	return service.repository.Get(id)
+}
+
+func isValidURL(rawURL string) bool {
+	trimmedURL := strings.TrimSpace(rawURL)
+
+	if trimmedURL == "" {
+		return false
+	}
+
+	parsedURL, err := url.ParseRequestURI(trimmedURL)
+	if err != nil {
+		return false
+	}
+
+	return parsedURL.Scheme == "http" || parsedURL.Scheme == "https"
 }

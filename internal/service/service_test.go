@@ -123,6 +123,55 @@ func TestURLServiceCreateShortURLRepositoryError(t *testing.T) {
 	}
 }
 
+func TestIsValidURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "valid HTTPS URL",
+			url:  "https://www.google.com",
+			want: true,
+		},
+		{
+			name: "valid HTTP URL",
+			url:  "http://www.example.com",
+			want: true,
+		},
+		{
+			name: "invalid URL",
+			url:  "not-a-url",
+			want: false,
+		},
+		{
+			name: "unsupported scheme",
+			url:  "ftp://www.example.com",
+			want: false,
+		},
+		{
+			name: "empty URL",
+			url:  " ",
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := isValidURL(test.url)
+
+			if got != test.want {
+				t.Fatalf(
+					"expected %v, got %v for URL %q",
+					test.want,
+					got,
+					test.url,
+				)
+			}
+		})
+	}
+}
+
 type MockURLRepository struct {
 	urls         map[string]domain.ShortenedURL
 	createCalls  int

@@ -166,7 +166,17 @@ func TestShortenURLValidation(t *testing.T) {
 		{
 			name:           "Shorten URL - Empty URL",
 			body:           `{"url":""}`,
-			expectedStatus: http.StatusInternalServerError,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Shorten URL - Invalid URL",
+			body:           `{"url":"not-a-url"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "Shorten URL - Unsupported Scheme",
+			body:           `{"url":"ftp://example.com"}`,
+			expectedStatus: http.StatusBadRequest,
 		},
 	}
 
