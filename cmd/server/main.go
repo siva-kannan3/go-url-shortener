@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -34,9 +35,12 @@ func main() {
 
 	router := handler.SetupRouter(urlService)
 
-	server := http.Server{
-		Addr:    cfg.PORT,
-		Handler: router,
+	server := &http.Server{
+		Addr:         ":" + cfg.PORT,
+		Handler:      router,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
 
 	log.Printf("Server starting on :%s", cfg.PORT)

@@ -19,8 +19,8 @@ func Load() (Config, error) {
 		return Config{}, errors.New("DB url not found")
 	}
 
-	if port != "" {
-		port = ":8000"
+	if port == "" {
+		port = "8000"
 	}
 
 	return Config{
