@@ -1,6 +1,11 @@
 package domain
 
+import (
+	"time"
+)
+
 type ShortenedURL struct {
-	ID  string
-	Url string
+	ID        string
+	Url       string
+	CreatedAt time.Time
 }

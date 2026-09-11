@@ -63,6 +63,10 @@ func TestPostgresRepositoryCreateAndGet(t *testing.T) {
 	if result.Url != input.Url {
 		t.Errorf("expected URL %q, got %q", input.Url, result.Url)
 	}
+
+	if result.CreatedAt.IsZero() {
+		t.Fatal("expected CreatedAt to be populated")
+	}
 }
 
 func TestPostgresRepositoryDuplicateID(t *testing.T) {

@@ -50,7 +50,16 @@ func (repository *PostgresRepository) Create(shortenedUrl domain.ShortenedURL) (
 func (repository *PostgresRepository) Get(id string) (domain.ShortenedURL, error) {
 	var shortenedURL domain.ShortenedURL
 
-	err := repository.db.QueryRow(`SELECT * FROM urls WHERE short_id = $1`, id).Scan(&shortenedURL.ID, &shortenedURL.Url)
+	err := repository.db.QueryRow(
+		`SELECT short_id, url, created_at
+     FROM urls
+     WHERE short_id = $1`,
+		id,
+	).Scan(
+		&shortenedURL.ID,
+		&shortenedURL.Url,
+		&shortenedURL.CreatedAt,
+	)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
