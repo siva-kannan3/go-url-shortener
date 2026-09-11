@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -36,11 +35,11 @@ func main() {
 	router := handler.SetupRouter(urlService)
 
 	server := http.Server{
-		Addr:    ":8000",
+		Addr:    cfg.PORT,
 		Handler: router,
 	}
 
-	fmt.Println("Listening on PORT: 8000")
+	log.Printf("Server starting on :%s", cfg.PORT)
 
 	log.Fatal(server.ListenAndServe())
 }

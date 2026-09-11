@@ -4,7 +4,7 @@ COPY . .
 
 RUN go mod download
 
-RUN GOOS=linux CGO_ENABLED=0 go build -o /build
+RUN GOOS=linux CGO_ENABLED=0 go build -o /build ./cmd/server
 
 FROM alpine:latest AS runner
 
