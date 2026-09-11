@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -43,7 +47,29 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	log.Printf("Server starting on :%s", cfg.PORT)
+	serverErrors := make(chan error, 1)
 
-	log.Fatal(server.ListenAndServe())
+	go func() {
+		log.Printf("Server starting on %s", server.Addr)
+
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	shutdownSignal := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignal, os.Interrupt, syscall.SIGTERM)
+
+	select {
+	case err := <-serverErrors:
+		log.Fatalf("server error: %v", err)
+
+	case signal := <-shutdownSignal:
+		log.Printf("Shutdown signal received: %s", signal)
+	}
+
+	shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownContext); err != nil {
+		log.Printf("Graceful shutdown failed: %v", err)
+	}
 }
